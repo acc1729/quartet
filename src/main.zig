@@ -4,9 +4,10 @@ const board = @import("board.zig");
 
 const NEWLINE: [1]u8 = .{'\n'};
 
+var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+const alloc = gpa.allocator();
+
 pub fn main() anyerror!void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const alloc = gpa.allocator();
     const map = board.Map.init();
     const stdout = std.io.getStdOut();
     const repr = try std.fmt.allocPrint(alloc, "{}", .{map});
