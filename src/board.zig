@@ -29,43 +29,45 @@ pub const Location = struct {
 const WIDTH = 8;
 const HEIGHT = 4;
 
-pub const Board = [HEIGHT][WIDTH]Location;
-const BoardRepr = [HEIGHT][WIDTH]u8;
+pub const Map = struct {
+    board: [HEIGHT][WIDTH]Location,
+    const Self = @This();
+    pub fn init() Map {
+        var board: [HEIGHT][WIDTH]Location = undefined;
+        var h: u8 = 1;
+        var w: u8 = 0;
+        while (w < WIDTH) : (w += 1) {
+            board[0][w] = Location{ .kind = Tile.wall };
 
-pub fn init(alloc: std.mem.Allocator) !*Board {
-    var board = try alloc.create(Board);
-    var h: u8 = 1;
-    var w: u8 = 0;
-    while (w < WIDTH) : (w += 1) {
-        board[0][w] = Location{ .kind = Tile.wall };
-
-        board[HEIGHT - 1][w] = Location{ .kind = Tile.wall };
-    }
-    while (h < HEIGHT - 1) : (h += 1) {
-        board[h][0] = Location{ .kind = Tile.wall };
-        w = 1;
-        while (w < WIDTH - 1) : (w += 1) {
-            board[h][w] = Location{ .kind = Tile.floor };
+            board[HEIGHT - 1][w] = Location{ .kind = Tile.wall };
         }
+        while (h < HEIGHT - 1) : (h += 1) {
+            board[h][0] = Location{ .kind = Tile.wall };
+            w = 1;
+            while (w < WIDTH - 1) : (w += 1) {
+                board[h][w] = Location{ .kind = Tile.floor };
+            }
 
-        board[h][WIDTH - 1] = Location{ .kind = Tile.wall };
+            board[h][WIDTH - 1] = Location{ .kind = Tile.wall };
+        }
+        return Self{.board = board};
     }
-    return board;
-}
-
-pub fn deinit(board: *Board, alloc: std.mem.Allocator) void {
-    alloc.free(board.tiles);
-}
-
-pub fn toString(board: *Board, alloc: std.mem.Allocator) !*BoardRepr {
-    var repr = try alloc.create(BoardRepr);
-    for (board) |row, h| {
-        for (row) |tile, w| {
-            repr[h][w] = tile.kind.repr();
+    pub fn format(
+        self: Self,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) @TypeOf(writer).Error!void {
+        _ = options;
+        _ = fmt;
+        for (self.board) |row| {
+            for (row) |tile| {
+                try writer.writeByte(tile.kind.repr());
+            }
+            try writer.writeByte('\n');
         }
     }
-    return repr;
-}
+};
 
 const ta = std.testing.allocator;
 
@@ -76,22 +78,25 @@ test "Tile types have representation." {
     try std.testing.expectEqual(water.repr(), '~');
 }
 
-test "Map is populated." {
-    const board = try init(ta);
-    defer ta.destroy(board);
-    try std.testing.expect(board[0][0].kind == Tile.wall);
-    try std.testing.expect(board[1][1].kind == Tile.floor);
-    try std.testing.expect(board[2][1].kind == Tile.floor);
-    try std.testing.expect(board[1][WIDTH - 1].kind == Tile.wall);
-    try std.testing.expect(board[HEIGHT - 1][WIDTH - 1].kind == Tile.wall);
+test "Map.init" {
+    const map = Map.init();
+    try std.testing.expect(map.board[0][0].kind == Tile.wall);
+    try std.testing.expect(map.board[1][1].kind == Tile.floor);
+    try std.testing.expect(map.board[2][1].kind == Tile.floor);
+    try std.testing.expect(map.board[1][WIDTH - 1].kind == Tile.wall);
+    try std.testing.expect(map.board[HEIGHT - 1][WIDTH - 1].kind == Tile.wall);
 }
 
-test "toString" {
-    const board = try init(ta);
-    defer ta.destroy(board);
-    const repr = try toString(board, ta);
-    defer ta.destroy(repr);
-    try std.testing.expectEqual(repr[0][0], '#');
-    try std.testing.expectEqual(repr[1][1], '.');
-    try std.testing.expectEqual(repr[HEIGHT - 1][WIDTH - 1], '#');
+fn locationOnBoard(x: u16, y: u16) u16 {
+    return ((y - 1) * (WIDTH + 1)) + x - 1;
+}
+
+test "Map.format" {
+    const map = Map.init();
+    const fmt = try std.fmt.allocPrint(ta, "{}", .{map});
+    defer ta.free(fmt);
+    
+    try std.testing.expectEqual(fmt[0], '#');
+    try std.testing.expectEqual(fmt[WIDTH], '\n');
+    try std.testing.expectEqual(fmt[comptime locationOnBoard(WIDTH, HEIGHT)], '#');
 }
