@@ -7,6 +7,9 @@ const NEWLINE: [1]u8 = .{'\n'};
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 const alloc = gpa.allocator();
 
+var prng = std.rand.DefaultPrng.init(44077);
+pub const random = prng.random();
+
 pub fn main() anyerror!void {
     defer _ = gpa.deinit();
     const map = m.Map.initFromFile("test.txt");

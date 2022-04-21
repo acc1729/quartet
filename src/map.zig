@@ -69,8 +69,8 @@ pub const Map = struct {
     pub fn initFromFile(filename: []const u8) !Self {
         var board: Board = undefined;
         const cwd = std.fs.cwd();
-        const static = try cwd.openDir("static", .{.iterate = false});
-            
+        const static = try cwd.openDir("static", .{ .iterate = false });
+
         var file = try static.openFile(filename, .{});
         defer file.close();
 
@@ -81,7 +81,7 @@ pub const Map = struct {
         var h: u8 = 0;
         while (try input_stream.readUntilDelimiterOrEof(&buf, '\n')) |line| {
             for (line) |char, w| {
-                board[h][w] = Location{.kind = try Tile.fromRepr(char)};
+                board[h][w] = Location{ .kind = try Tile.fromRepr(char) };
             }
             h += 1;
         }
@@ -132,7 +132,7 @@ test "Map.init" {
 test "Map.initFromFile" {
     const filename = "test.txt";
     const map = try Map.initFromFile(filename);
-    
+
     try t.expect(map.board[0][0].kind == Tile.Wall);
     try t.expect(map.board[2][3].kind == Tile.Water);
 }

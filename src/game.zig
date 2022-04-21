@@ -9,9 +9,9 @@ pub const Game = struct {
 
     const Self = @This();
 
-    pub fn init() Self {
+    pub fn init(filename: []const u8) !Self {
         return Self{
-            .map = m.Map.init(),
+            .map = try m.Map.initFromFile(filename),
             .units = &.{},
             .round = 0,
         };
@@ -21,6 +21,7 @@ pub const Game = struct {
 const t = std.testing;
 
 test "Game.init" {
-    const game = Game.init();
+    const game = try Game.init("test.txt");
     try t.expectEqual(game.round, 0);
+    try t.expect(game.map.board[3][3].kind.repr() == '~');
 }

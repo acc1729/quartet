@@ -1,14 +1,22 @@
 const std = @import("std");
 
-const rand = std.rand;
+const random = @import("main.zig").random;
 const resource = @import("resource.zig");
 
 const Resource = resource.Resource;
 
+pub const Loyalty = enum {
+    Friend,
+    Enemy,
+};
+
 pub const Unit = struct {
+    loyalty: Loyalty,
+
     health: Resource,
     mana: Resource,
     movement: u8,
+    speed: u8,
     strength: u8,
     constitution: u8,
     intellect: u8,
@@ -18,8 +26,6 @@ pub const Unit = struct {
     const Self = @This();
 
     pub fn is_lucky(self: Self) bool {
-        var rng = rand.DefaultPrng.init(44077);
-        const random = rng.random();
         return (random.uintLessThan(u8, 100) < self.luck);
     }
 
@@ -39,13 +45,32 @@ pub const Unit = struct {
             other.health.remove(self.intellect - other.will);
         }
     }
+
+    pub fn format(
+        self: Self,
+        comptime fmt: []const u8,
+        options: std.fmt.FormatOptions,
+        writer: anytype,
+    ) @TypeOf(writer).Error!void {
+        _ = fmt;
+        _ = options;
+        try writer.writeByte(switch (self.loyalty) {
+            .Enemy => 'E',
+            .Friend => 'A',
+        });
+    }
 };
+
+const t = std.testing;
+const ta = t.allocator;
 
 fn getDefaultUnit() Unit {
     return Unit{
+        .loyalty = .Friend,
         .health = Resource{ .current = 10, .max = 10 },
         .mana = Resource{ .current = 10, .max = 10 },
         .movement = 4,
+        .speed = 5,
         .strength = 6,
         .constitution = 3,
         .intellect = 8,
@@ -81,4 +106,11 @@ test "Units can spellcast." {
 
     attacker.spell(&defender);
     try std.testing.expect(defender.health.current == pre_fizzle_health);
+}
+
+test "Unit.format" {
+    const attacker = getDefaultUnit();
+    const fmt = try std.fmt.allocPrint(ta, "{}", .{attacker});
+    defer ta.free(fmt);
+    try t.expectEqualSlices(u8, fmt, "A");
 }
